@@ -1,0 +1,51 @@
+{
+  "Table": {
+    "Id": "Eqinson",
+    "Header": [
+      {
+        "name": "string"
+      },
+      {
+        "age": "int"
+      },
+      {
+        "job": "string"
+      },
+      {
+        "hometown": "string"
+      }
+    ],
+    "Content": [
+      {
+        "Tuple": "{eqinson1}{1}{software engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson2}{2}{support engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson3}{3}{test engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson4}{4}{manager}{SH}"
+      },
+      {
+        "Tuple": "{eqinson1}{1}{software engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson2}{2}{support engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson3}{3}{test engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson4}{4}{manager}{SH}"
+      },
+      {
+        "Tuple": "{eqinson2}{2}{support engineer}{SH}"
+      },
+      {
+        "Tuple": "{eqinson1}{1}{software engineer}{SH}"
+      }
+    ]
+  }
+}

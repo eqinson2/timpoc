@@ -1,0 +1,67 @@
+complexTypeForTable(ele) ::= <<
+
+
+<xs:complexType name="$ele.name$">
+  <xs:sequence>
+    $ele.records:list_element();separator=" \n"$
+  </xs:sequence>
+</xs:complexType>
+>>
+
+complexTypeForTableTuple(ele) ::= <<
+
+
+<xs:complexType name="$ele.type$">
+  <xs:sequence>
+    $ele.tuples:single_element();separator=" \n"$
+  </xs:sequence>
+</xs:complexType>
+>>
+
+list_element(ele) ::= <<
+<xs:element name="$ele.name$" $ele:defined_element_type()$ $ele:element_min_occur()$ $ele:element_max_occurs()$></xs:element>
+>>
+
+single_element(ele) ::= <<
+<xs:element name="$ele.name$" $ele:raw_element_type()$ $ele:element_min_occur()$></xs:element>
+>>
+
+defined_element_type(ele) ::= <<
+$if(ele.type)$type="$ele.type$"$endif$
+>>
+
+raw_element_type(ele) ::= <<
+$if(ele.type)$type="xs:$ele.type$"$endif$
+>>
+
+element_max_occurs(ele) ::= <<
+maxOccurs="unbounded"
+>>
+
+element_min_occur(ele) ::= <<
+minOccurs="1"
+>>
+
+schemaHeader() ::= <<
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	elementFormDefault="qualified"
+		attributeFormDefault="unqualified"
+			xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+			   xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
+			  	 jaxb:extensionBindingPrefixes="xjc"
+                   		jaxb:version="1.0">
+	<xs:annotation>
+	   <xs:appinfo>
+		  <jaxb:globalBindings enableJavaNamingConventions="false" underscoreBinding="asCharInWord">
+			  <xjc:serializable uid="12343" />
+		  </jaxb:globalBindings>
+	   </xs:appinfo>
+	</xs:annotation>
+>>
+
+schemaFooter() ::= <<
+
+
+</xs:schema>
+>>

@@ -1,0 +1,25 @@
+<assembly>
+    <id>zkcache</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/target</directory>
+            <outputDirectory>${artifactId}-${project.version}
+            </outputDirectory>
+            <includes>
+                <include>${artifactId}-${project.version}.jar</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/dependencies</directory>
+            <outputDirectory>${artifactId}-${project.version}
+            </outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>
