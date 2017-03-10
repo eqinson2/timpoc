@@ -17,7 +17,6 @@ release.properties
 WebContent/
 .repository/
 ISO/targetFilePath
-#bin/
 *\.orig
 *\.back
 ttcn-admin/
@@ -37,4 +36,3 @@ compile
 #ignore log files
 *.log
 
-Tim/
