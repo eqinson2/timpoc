@@ -8,7 +8,7 @@ public enum TableInfoMap {
 
     private Map<String, TableInfoContext> map = new ConcurrentHashMap<>();
 
-    public void registerIntoRegistry(String tablename, Map<String, String> tableMetadata, Object tabledata) {
+    public void register(String tablename, Map<String, String> tableMetadata, Object tabledata) {
         map.remove(tablename);//force old one to gc
         TableInfoContext context = new TableInfoContext();
         context.setTableMetadata(tableMetadata);
@@ -20,7 +20,7 @@ public enum TableInfoMap {
         map.clear();
     }
 
-    public void unregisterFromRegistry(String tableName) {
+    public void unregister(String tableName) {
         map.remove(tableName);
     }
 

@@ -116,7 +116,7 @@ public class AppMain {
         Object obj = tabL.loadData();
 
         //8. register tab
-        tableInfoMap.registerIntoRegistry(tableName, jloader.getTableMetadata(), obj);
+        tableInfoMap.register(tableName, jloader.getTableMetadata(), obj);
 
         //9. select:
         LOGGER.info("=====================select some data for testing=====================");

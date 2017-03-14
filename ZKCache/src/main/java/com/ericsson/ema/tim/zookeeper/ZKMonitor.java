@@ -137,12 +137,13 @@ public class ZKMonitor {
         }
         //1. load json
         JsonLoader jloader = loadJsonFromRawData(new String(rawData), zkNodeName);
+        String tableName = jloader.getTableName();
 
         if (!isMetaDataDefined(jloader)) {
             //metadata change-> function need re-reflection
-            tableInfoMap.unregisterFromRegistry(jloader.getTableName());
-            tab2MethodInvocationCacheMap.unRegister(jloader.getTableName());
-            tab2ClzMap.unRegister(jloader.getTableName());
+            tableInfoMap.unregister(tableName);
+            tab2MethodInvocationCacheMap.unRegister(tableName);
+            tab2ClzMap.unRegister(tableName);
 
             //2. parse json cache and build as datamodel
             Table table = buildDataModelFromJson(jloader);
@@ -154,16 +155,16 @@ public class ZKMonitor {
             //5. compile javabean
             compileJavaBean();
             //6. load javabean class
-            loadJavaBean(jloader.getTableName());
+            loadJavaBean(tableName);
             updateMetaData(jloader);
         }
         //7. load data by reflection, and the new data will replace old one.
         Object obj = loadDataByReflection(jloader);
         //8. register tab into global registry
-        LOGGER.info("=====================register {}=====================", jloader.getTableName());
+        LOGGER.info("=====================register {}=====================", tableName);
 
         //force original loaded obj and its classloader to gc
-        tableInfoMap.registerIntoRegistry(jloader.getTableName(), jloader.getTableMetadata(), obj);
+        tableInfoMap.register(tableName, jloader.getTableMetadata(), obj);
         //System.gc();//enable -XX:+TraceClassUnloading
     }
 
@@ -260,7 +261,7 @@ public class ZKMonitor {
     private void unloadOneTable(String zkNodeName) {
         LOGGER.info("=====================register {}=====================", zkNodeName);
         metaDataRegistry.unregisterMetaData(zkNodeName);
-        tableInfoMap.unregisterFromRegistry(zkNodeName);
+        tableInfoMap.unregister(zkNodeName);
         tab2MethodInvocationCacheMap.unRegister(zkNodeName);
         tab2ClzMap.unRegister(zkNodeName);
     }

@@ -5,7 +5,7 @@ target/
 
 # Ignore maven artifacts
 artifacts/
-
+Tim/
 
 # Ignore Maven release related files
 *.releaseBackup
