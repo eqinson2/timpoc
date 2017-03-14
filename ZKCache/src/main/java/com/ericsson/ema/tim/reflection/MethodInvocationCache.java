@@ -13,9 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-public enum MethodInvocationCache {
-    methodInvocationCache;
-
+public class MethodInvocationCache {
     private final Logger LOGGER = LoggerFactory.getLogger(MethodInvocationCache
             .class);
 
@@ -56,14 +54,9 @@ public enum MethodInvocationCache {
         return cached;
     }
 
-    public void cleanup() {
+    void cleanup() {
         getterStore.clear();
         setterStore.clear();
-    }
-
-    public void cleanKey(String key) {
-        getterStore.remove(key);
-        setterStore.remove(key);
     }
 
     public enum AccessType {

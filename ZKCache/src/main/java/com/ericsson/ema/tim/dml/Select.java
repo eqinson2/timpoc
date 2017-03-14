@@ -1,6 +1,7 @@
 package com.ericsson.ema.tim.dml;
 
 import com.ericsson.ema.tim.dml.condition.Clause;
+import com.ericsson.ema.tim.reflection.MethodInvocationCache;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
 import static com.ericsson.ema.tim.reflection.MethodInvocationCache.AccessType.GET;
-import static com.ericsson.ema.tim.reflection.MethodInvocationCache.methodInvocationCache;
+import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 
 public class Select {
     private final static String TUPLE_FIELD = "records";
@@ -20,6 +21,7 @@ public class Select {
     private List<Clause> clauses = new ArrayList<>();
     private List<Object> records;
     private List<String> selectedFields;
+    private MethodInvocationCache methodInvocationCache;
 
     private Select() {
         this.selectedFields = Collections.emptyList();
@@ -38,12 +40,17 @@ public class Select {
         return new Select(fields);
     }
 
+    public MethodInvocationCache getMethodInvocationCache() {
+        return methodInvocationCache;
+    }
+
     public TableInfoContext getContext() {
         return context;
     }
 
     public Select from(String tab) {
         context = tableInfoMap.lookup(tab);
+        methodInvocationCache = tab2MethodInvocationCacheMap.lookup(tab);
         if (context != null) {
             return from(context.getTabledata());
         } else {
@@ -75,6 +82,9 @@ public class Select {
     }
 
     public List<Object> execute() {
+        if (context == null)
+            throw new RuntimeException("Table not specifiled in Select");
+
         List<Object> result = records.stream().filter(
                 o -> clauses.stream()
                         .map(eachClause -> eachClause.eval(o))

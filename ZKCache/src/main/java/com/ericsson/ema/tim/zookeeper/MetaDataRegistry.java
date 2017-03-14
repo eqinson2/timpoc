@@ -1,12 +1,12 @@
 package com.ericsson.ema.tim.zookeeper;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public enum MetaDataRegistry {
     metaDataRegistry;
 
-    private Map<String, Map<String, String>> registry = new ConcurrentHashMap<>();
+    private Map<String, Map<String, String>> registry = new HashMap<>();
 
     public void registerMetaData(String tableName, Map<String, String> metadata) {
         registry.put(tableName, metadata);
@@ -16,7 +16,7 @@ public enum MetaDataRegistry {
         registry.remove(tableName);
     }
 
-    public void unregisterAll() {
+    public void clear() {
         registry.clear();
     }
 

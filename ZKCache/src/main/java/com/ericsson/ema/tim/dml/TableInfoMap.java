@@ -16,7 +16,7 @@ public enum TableInfoMap {
         map.put(tablename, context);
     }
 
-    public void clearAllRegistry() {
+    public void clear() {
         map.clear();
     }
 

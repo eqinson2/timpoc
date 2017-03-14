@@ -35,4 +35,5 @@ compile
 
 #ignore log files
 *.log
+*.class
 

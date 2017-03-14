@@ -30,7 +30,8 @@ import java.util.List;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
 import static com.ericsson.ema.tim.javabean.JavaBeanClassLoader.javaBeanClassLoader;
-import static com.ericsson.ema.tim.reflection.MethodInvocationCache.methodInvocationCache;
+import static com.ericsson.ema.tim.reflection.Tab2ClzMap.tab2ClzMap;
+import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 import static com.ericsson.ema.tim.zookeeper.MetaDataRegistry.metaDataRegistry;
 import static org.apache.zookeeper.CreateMode.PERSISTENT;
 import static org.apache.zookeeper.ZooDefs.Ids.OPEN_ACL_UNSAFE;
@@ -64,7 +65,7 @@ public class ZKMonitor {
             JAVABEAN_PKG =
                     SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.javabeanpkg");
         } catch (Exception e) {
-            JAVABEAN_DIR = "genjavabean";
+            JAVABEAN_PKG = "genjavabean";
         }
 
         try {
@@ -138,8 +139,11 @@ public class ZKMonitor {
         JsonLoader jloader = loadJsonFromRawData(new String(rawData), zkNodeName);
 
         if (!isMetaDataDefined(jloader)) {
-            methodInvocationCache.cleanKey(jloader.getTableName());//metadata change-> function need
-            // re-reflection
+            //metadata change-> function need re-reflection
+            tableInfoMap.unregisterFromRegistry(jloader.getTableName());
+            tab2MethodInvocationCacheMap.unRegister(jloader.getTableName());
+            tab2ClzMap.unRegister(jloader.getTableName());
+
             //2. parse json cache and build as datamodel
             Table table = buildDataModelFromJson(jloader);
             //3. render as xsd
@@ -160,6 +164,7 @@ public class ZKMonitor {
 
         //force original loaded obj and its classloader to gc
         tableInfoMap.registerIntoRegistry(jloader.getTableName(), jloader.getTableMetadata(), obj);
+        //System.gc();//enable -XX:+TraceClassUnloading
     }
 
     private boolean isMetaDataDefined(JsonLoader jsonLoader) {
@@ -246,14 +251,18 @@ public class ZKMonitor {
 
     private void unloadAllTable() {
         LOGGER.info("=====================unregister all table=====================");
-        metaDataRegistry.unregisterAll();
-        tableInfoMap.clearAllRegistry();
+        metaDataRegistry.clear();
+        tableInfoMap.clear();
+        tab2MethodInvocationCacheMap.clear();
+        tab2ClzMap.clear();
     }
 
     private void unloadOneTable(String zkNodeName) {
         LOGGER.info("=====================register {}=====================", zkNodeName);
         metaDataRegistry.unregisterMetaData(zkNodeName);
         tableInfoMap.unregisterFromRegistry(zkNodeName);
+        tab2MethodInvocationCacheMap.unRegister(zkNodeName);
+        tab2ClzMap.unRegister(zkNodeName);
     }
 
     private void childrenAdded(List<String> children) {

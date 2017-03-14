@@ -13,11 +13,13 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.ericsson.ema.tim.reflection.MethodInvocationCache.methodInvocationCache;
+import static com.ericsson.ema.tim.reflection.Tab2ClzMap.tab2ClzMap;
+import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 
 public class TabDataLoader {
     private final static Logger LOGGER = LoggerFactory.getLogger(TabDataLoader.class);
     private final static String TUPLE_FIELD = "records";
+    private final MethodInvocationCache cache;
 
     private final String classToLoad;
     private final JsonLoader jloader;
@@ -25,6 +27,7 @@ public class TabDataLoader {
     public TabDataLoader(String clzToLoad, JsonLoader jloader) {
         this.classToLoad = clzToLoad;
         this.jloader = jloader;
+        cache = tab2MethodInvocationCacheMap.lookup(jloader.getTableName());
     }
 
     private static Object realFieldVal(FieldInfo field) {
@@ -46,13 +49,18 @@ public class TabDataLoader {
             InstantiationException,
             InvocationTargetException {
         LOGGER.info("=====================reflect class: {}=====================", classToLoad);
-        Class<?> clz = Thread.currentThread().getContextClassLoader().loadClass(classToLoad);
+        Class<?> clz = tab2ClzMap.lookup(jloader.getTableName());
+        if (clz == null) {
+            clz = Thread.currentThread().getContextClassLoader().loadClass(classToLoad);
+            tab2ClzMap.register(jloader.getTableName(), clz);
+        }
+
         Object obj = clz.newInstance();
 
         JavaBeanReflectionProxy proxy = new JavaBeanReflectionProxy(obj);
         LOGGER.debug("init getTupleListType: {}", proxy.getTupleListType());
 
-        Method getter = methodInvocationCache.get(clz, TUPLE_FIELD, MethodInvocationCache.AccessType.GET);
+        Method getter = cache.get(clz, TUPLE_FIELD, MethodInvocationCache.AccessType.GET);
         List<Object> records = (List<Object>) getter.invoke(obj);//it will create a list internally
 
         List<List<FieldInfo>> rowcol = jloader.getTupleList();

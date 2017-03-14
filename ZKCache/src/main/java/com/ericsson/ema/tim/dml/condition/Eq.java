@@ -8,7 +8,6 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 import static com.ericsson.ema.tim.reflection.MethodInvocationCache.AccessType.GET;
-import static com.ericsson.ema.tim.reflection.MethodInvocationCache.methodInvocationCache;
 
 public class Eq extends Clause {
     private final static Logger LOGGER = LoggerFactory.getLogger(Eq.class);
@@ -41,7 +40,7 @@ public class Eq extends Clause {
             return false;
 
         Object fieldVal;
-        Method getter = methodInvocationCache.get(tuple.getClass(), field, GET);
+        Method getter = getParent().getMethodInvocationCache().get(tuple.getClass(), field, GET);
         try {
             fieldVal = getter.invoke(tuple);
         } catch (IllegalAccessException | InvocationTargetException e) {

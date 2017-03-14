@@ -11,7 +11,7 @@ public enum JavaBeanClassLoader {
     javaBeanClassLoader;
 
     private final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(JavaBeanClassLoader.class);
-
+    private ClassLoader origClassLoader;
 
     public void loadClassFromClassPath(String pathStr, String clzName) {
         if (pathStr == null || "".equals(pathStr)) {
@@ -21,17 +21,12 @@ public enum JavaBeanClassLoader {
         Path path = Paths.get(pathStr);
         try {
             URL[] urls = {path.toUri().toURL()};
-            URLClassLoader urlClassLoader = new URLClassLoader(urls, this.getClass().getClassLoader());
+            ClassLoader origClassLoader = this.getClass().getClassLoader();
+            URLClassLoader urlClassLoader = new URLClassLoader(urls, origClassLoader);
+            LOGGER.debug("new URLClassLoader:{}", urlClassLoader);
             Thread.currentThread().setContextClassLoader(urlClassLoader);
-//            Class<?> urlClass = URLClassLoader.class;
-//            Method method = urlClass.getDeclaredMethod("addURL", URL.class);
-//            method.setAccessible(true);
-//            LOGGER.info("add {} to system class path...", pathStr);
-//            method.invoke(urlClassLoader, path.toUri().toURL());
-
             LOGGER.info("load class {} {}...", clzName, clzName + "Data");
             urlClassLoader.loadClass(clzName);
-            urlClassLoader.loadClass(clzName + "Data");
         } catch (Exception e) {
             LOGGER.error("Failed to load class", e);
             throw new RuntimeException(e);

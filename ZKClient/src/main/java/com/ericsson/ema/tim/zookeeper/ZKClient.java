@@ -35,6 +35,7 @@ public class ZKClient implements Watcher {
             LOGGER.debug("create znode {}" + rootPath);
             zkc.createPersistentNode(rootPath, "");
         }
+
         String jsonStr = FileUtils.readFile(jsonFile);
         String tab = zkc.parseTableName();
 
