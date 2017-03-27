@@ -36,7 +36,7 @@ public class Eq extends Clause {
 
     @Override
     public boolean eval(Object tuple) {
-        if (this.valueToComp == null)
+        if (this.valueToComp == null || this.valueToComp.equals(""))
             return false;
 
         Object fieldVal;

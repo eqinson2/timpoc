@@ -18,13 +18,12 @@ public class JavaBeanReflectionProxy {
 
     public JavaBeanReflectionProxy(Object instance) {
         this.instance = instance;
-        tupleListType = getTupleListTypeInfo().orElseGet(() -> null);
+        tupleListType = getTupleListTypeInfo().orElseGet(null);
     }
 
     public Class<?> getTupleListType() {
         return tupleListType;
     }
-
 
     private Optional<? extends Class<?>> getTupleListTypeInfo() {
         Field field = Arrays.stream(instance.getClass().getDeclaredFields()).filter(f ->
@@ -35,9 +34,8 @@ public class JavaBeanReflectionProxy {
         if (genericFieldType instanceof ParameterizedType) {
             ParameterizedType aType = (ParameterizedType) genericFieldType;
             Type[] fieldArgTypes = aType.getActualTypeArguments();
-            return fieldArgTypes == null || fieldArgTypes.length == 0 ? Optional.empty() : Arrays
-                    .stream(fieldArgTypes)
-                    .map(t -> (Class<?>) t).findFirst();
+            return fieldArgTypes == null ? Optional.empty() : Arrays.stream(fieldArgTypes).map(t ->
+                    (Class<?>) t).findFirst();
         }
 
         return Optional.empty();

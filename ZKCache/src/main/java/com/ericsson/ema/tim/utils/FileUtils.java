@@ -10,7 +10,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Comparator;
+import java.util.Optional;
 
 public class FileUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileUtils.class);
@@ -18,9 +19,9 @@ public class FileUtils {
     private FileUtils() {
     }
 
-    public static Path getPath(String resource) throws URISyntaxException {
+    public static Optional<Path> getPath(String resource) throws URISyntaxException {
         URL url = FileUtils.class.getClassLoader().getResource(resource);
-        return url != null ? Paths.get(url.toURI()) : null;
+        return url != null ? Optional.of(Paths.get(url.toURI())) : Optional.empty();
     }
 
     public static String readFile(String path) throws IOException {
@@ -45,59 +46,50 @@ public class FileUtils {
         }
     }
 
-//    public static void rmDirRecursively(String path) throws IOException {
-//        Path rootPath = Paths.get(path);
-//        if (Files.exists(rootPath) && Files.isDirectory(rootPath))
-//            Files.walk(rootPath)
-//                    .sorted(Comparator.reverseOrder())
-//                    .filter(p -> !p.toFile().getName().equals(path))//skip root dir
-//                    .peek(f -> LOGGER.debug("delete file {}", f))
-//                    .forEach(p -> {
-//                        try {
-//                            Files.delete(p);
-//                        } catch (NoSuchFileException ex) {
-//                            LOGGER.error("{}: no such" + " file or directory", p);
-//                        } catch (DirectoryNotEmptyException ex) {
-//                            LOGGER.error("{} not empty", p);
-//                            File dir = p.toFile();
-//                            String[] files = dir.list();
-//                            if (files.length == 0) {
-//                                LOGGER.debug("The directory is empty");
-//                            } else {
-//                                for (String aFile : files) {
-//                                    LOGGER.debug(aFile);
-//                                }
-//                            }
-//                        } catch (IOException ex) {
-//                            LOGGER.error(ex.getMessage());
-//                        }
-//                    });
-//    }
-
-    public static void rmDirRecursively(String dirName) throws IOException {
-        Path path = Paths.get(dirName);
-        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                LOGGER.debug("delete file {}", file.getFileName());
-                Files.delete(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if (dir.toFile().getName().equals(dirName))
-                    return FileVisitResult.CONTINUE;
-                else if (exc == null) {
-                    LOGGER.debug("delete dir {}", dir.getFileName());
-                    Files.delete(dir);
-                    return FileVisitResult.CONTINUE;
-                } else {
-                    throw exc;
-                }
-            }
-        });
+    public static void rmDirRecursively(String path) throws IOException {
+        Path rootPath = Paths.get(path);
+        if (Files.exists(rootPath) && Files.isDirectory(rootPath))
+            Files.walk(rootPath)
+                    .sorted(Comparator.reverseOrder())
+                    .filter(p -> !p.toFile().getName().equals(path))//skip root dir
+                    .peek(f -> LOGGER.debug("delete file {}", f))
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (NoSuchFileException ex) {
+                            LOGGER.error("{}: no such" + " file or directory", p);
+                        } catch (DirectoryNotEmptyException ex) {
+                            LOGGER.error("{} not empty", p);
+                        } catch (IOException ex) {
+                            LOGGER.error(ex.getMessage());
+                        }
+                    });
     }
+
+//    public static void rmDirRecursively(String dirName) throws IOException {
+//        Path path = Paths.get(dirName);
+//        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+//            @Override
+//            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+//                LOGGER.debug("delete file {}", file.getFileName());
+//                Files.delete(file);
+//                return FileVisitResult.CONTINUE;
+//            }
+//
+//            @Override
+//            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+//                if (dir.toFile().getName().equals(dirName))
+//                    return FileVisitResult.CONTINUE;
+//                else if (exc == null) {
+//                    LOGGER.debug("delete dir {}", dir.getFileName());
+//                    Files.delete(dir);
+//                    return FileVisitResult.CONTINUE;
+//                } else {
+//                    throw exc;
+//                }
+//            }
+//        });
+//    }
 
     public static String package2Path(String packageName) {
         return packageName.replace(".", "/");

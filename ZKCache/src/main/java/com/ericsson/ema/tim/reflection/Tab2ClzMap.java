@@ -2,6 +2,7 @@ package com.ericsson.ema.tim.reflection;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public enum Tab2ClzMap {
     tab2ClzMap;
@@ -12,8 +13,8 @@ public enum Tab2ClzMap {
         registry.put(tableName, clz);
     }
 
-    public Class<?> lookup(String tableName) {
-        return registry.get(tableName);
+    public Optional<Class<?>> lookup(String tableName) {
+        return Optional.ofNullable(registry.get(tableName));
     }
 
     public void unRegister(String tableName) {

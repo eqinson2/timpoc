@@ -14,10 +14,6 @@ public enum JavaBeanClassLoader {
     private ClassLoader origClassLoader;
 
     public void loadClassFromClassPath(String pathStr, String clzName) {
-        if (pathStr == null || "".equals(pathStr)) {
-            return;
-        }
-
         Path path = Paths.get(pathStr);
         try {
             URL[] urls = {path.toUri().toURL()};

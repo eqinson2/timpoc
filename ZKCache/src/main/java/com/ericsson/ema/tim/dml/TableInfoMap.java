@@ -1,6 +1,7 @@
 package com.ericsson.ema.tim.dml;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public enum TableInfoMap {
@@ -9,11 +10,13 @@ public enum TableInfoMap {
     private Map<String, TableInfoContext> map = new ConcurrentHashMap<>();
 
     public void register(String tablename, Map<String, String> tableMetadata, Object tabledata) {
-        map.remove(tablename);//force old one to gc
-        TableInfoContext context = new TableInfoContext();
-        context.setTableMetadata(tableMetadata);
-        context.setTabledata(tabledata);
-        map.put(tablename, context);
+        unregister(tablename);//force old one to gc
+        map.computeIfAbsent(tablename, k -> {
+            TableInfoContext context = new TableInfoContext();
+            context.setTableMetadata(tableMetadata);
+            context.setTabledata(tabledata);
+            return context;
+        });
     }
 
     public void clear() {
@@ -24,8 +27,8 @@ public enum TableInfoMap {
         map.remove(tableName);
     }
 
-    public TableInfoContext lookup(String tablename) {
-        return map.get(tablename);
+    public Optional<TableInfoContext> lookup(String tablename) {
+        return Optional.ofNullable(map.get(tablename));
     }
 }
 

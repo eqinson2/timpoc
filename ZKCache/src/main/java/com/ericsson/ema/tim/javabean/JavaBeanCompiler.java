@@ -19,7 +19,6 @@ public class JavaBeanCompiler {
     private List<Path> javaSrcFileDir;
 
     public static List<File> findSrcJava(Path targetDirPath) throws IOException {
-
         LOGGER.debug("Going to find java files under {}", targetDirPath.getFileName());
         return Files.list(targetDirPath).filter(f -> f.toString().endsWith(".java")).
                 map(Path::toFile).collect(Collectors.toList());

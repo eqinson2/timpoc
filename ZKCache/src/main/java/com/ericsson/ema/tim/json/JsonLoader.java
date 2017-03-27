@@ -22,12 +22,13 @@ public class JsonLoader {
     private final static Pattern p = Pattern.compile("\\{[\\w ]+\\}");
 
     private final Logger LOGGER = LoggerFactory.getLogger(JsonLoader.class);
+    private final Map<Integer, TypeInfo> tableHeaderIndexMap = new HashMap<>();
+    private final Map<String, String> tableMetadata = new LinkedHashMap<>();
+    private final List<List<FieldInfo>> tupleList = new ArrayList<>();
     private String tableName;
-    private Map<Integer, TypeInfo> tableHeaderIndexMap = new HashMap<>();
-    private Map<String, String> tableMetadata = new LinkedHashMap<>();
-    private List<List<FieldInfo>> tupleList = new ArrayList<>();
 
     public JsonLoader() {
+        this.tableName = "";
     }
 
     public JsonLoader(String tableName) {
@@ -61,11 +62,11 @@ public class JsonLoader {
             List<FieldInfo> tuple = new ArrayList<>();
             Matcher m = p.matcher(content);
 
-            int colume = 0;
+            int column = 0;
             while (m.find()) {
-                tuple.add(new FieldInfo(trimBrace(m.group()), tableHeaderIndexMap.get(colume).getName(),
-                        tableHeaderIndexMap.get(colume).getType()));
-                colume++;
+                tuple.add(new FieldInfo(trimBrace(m.group()), tableHeaderIndexMap.get(column).getName(),
+                        tableHeaderIndexMap.get(column).getType()));
+                column++;
             }
             tupleList.add(tuple);
         }

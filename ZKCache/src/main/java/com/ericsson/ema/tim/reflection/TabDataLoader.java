@@ -49,11 +49,9 @@ public class TabDataLoader {
             InstantiationException,
             InvocationTargetException {
         LOGGER.info("=====================reflect class: {}=====================", classToLoad);
-        Class<?> clz = tab2ClzMap.lookup(jloader.getTableName());
-        if (clz == null) {
-            clz = Thread.currentThread().getContextClassLoader().loadClass(classToLoad);
-            tab2ClzMap.register(jloader.getTableName(), clz);
-        }
+        Class<?> clz = tab2ClzMap.lookup(jloader.getTableName()).orElse(Thread.currentThread()
+                .getContextClassLoader().loadClass(classToLoad));
+        tab2ClzMap.register(jloader.getTableName(), clz);
 
         Object obj = clz.newInstance();
 

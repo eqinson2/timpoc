@@ -27,7 +27,7 @@ public enum ZKConnectionManager {
 
     private static final int SESSION_TIMEOUT = 6000;
     private String connectStr;
-    private Optional<ZooKeeper> zooKeeper = Optional.empty();
+    private ZooKeeper zooKeeper;
 
     private Set<ZKConnectionChangeWatcher> listeners = new HashSet<>();
 
@@ -53,7 +53,7 @@ public enum ZKConnectionManager {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(60000);
-                    if (waitForReconnect && !zooKeeper.isPresent()) {
+                    if (waitForReconnect && !getConnection().isPresent()) {
                         LOGGER.info("ZK reconnection is wanted.");
                         connect();
                     }
@@ -71,11 +71,11 @@ public enum ZKConnectionManager {
     private void connect() {
         try {
             ConnectionWatcher watcher = new ConnectionWatcher();
-            zooKeeper = Optional.of(new ZooKeeper(connectStr, SESSION_TIMEOUT, watcher));
+            zooKeeper = new ZooKeeper(connectStr, SESSION_TIMEOUT, watcher);
             watcher.waitUntilConnected();
         } catch (IOException e) {
             LOGGER.warn("Failed to create zookeeper connection.", e);
-            zooKeeper = Optional.empty();
+            zooKeeper = null;
         }
     }
 
@@ -93,23 +93,19 @@ public enum ZKConnectionManager {
         } catch (InterruptedException e) {
             LOGGER.warn("interrupted from await for termination");
         }
-        zooKeeper.ifPresent(ZooKeeperUtil::closeNoException);
-        zooKeeper = Optional.empty();
+        getConnection().ifPresent(ZooKeeperUtil::closeNoException);
+        zooKeeper = null;
     }
 
     /**
      * get the zookeeper connection
-     *
-     * @return
      */
     public Optional<ZooKeeper> getConnection() {
-        return zooKeeper;
+        return Optional.ofNullable(zooKeeper);
     }
 
     /**
      * register the listener to monitor the connection status change
-     *
-     * @param listener
      */
     public void registerListener(ZKConnectionChangeWatcher listener) {
         listeners.add(listener);
@@ -121,7 +117,7 @@ public enum ZKConnectionManager {
 
 
     private String getSessionId() {
-        return zooKeeper.map(c -> "0x" + Long.toHexString(c.getSessionId())).orElse("NO-SESSION");
+        return getConnection().map(c -> "0x" + Long.toHexString(c.getSessionId())).orElse("NO-SESSION");
     }
 
     private class ConnectionWatcher implements Watcher {
@@ -139,7 +135,7 @@ public enum ZKConnectionManager {
                 LOGGER.error("The session [{}] in ZK has been expired will perform an automatic " +
                         "re-connection attempt", getSessionId());
                 connect();
-                if (!zooKeeper.isPresent() && !waitForReconnect) {
+                if (!getConnection().isPresent() && !waitForReconnect) {
                     LOGGER.error("Failed to reconnect the zookeeper server");
                     waitForReconnect = true;
                 }
@@ -161,11 +157,11 @@ public enum ZKConnectionManager {
             }
         }
 
-        private boolean waitUntilConnected() {
+        private void waitUntilConnected() {
             try {
-                return latch.await(60, TimeUnit.SECONDS);
+                latch.await(60, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                return false;
+                LOGGER.trace(e.getMessage());
             }
         }
     }

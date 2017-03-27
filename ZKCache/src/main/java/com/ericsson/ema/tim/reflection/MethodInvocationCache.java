@@ -14,8 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class MethodInvocationCache {
-    private final Logger LOGGER = LoggerFactory.getLogger(MethodInvocationCache
-            .class);
+    private final Logger LOGGER = LoggerFactory.getLogger(MethodInvocationCache.class);
 
     private final Map<MethodInvocationKey, Method> getterStore = new ConcurrentHashMap<>();
     private final Map<MethodInvocationKey, Method> setterStore = new ConcurrentHashMap<>();
@@ -24,8 +23,7 @@ public class MethodInvocationCache {
     private static Method lookup(Class<?> clz, String property) throws IntrospectionException {
         BeanInfo beanInfo = Introspector.getBeanInfo(clz);
         return Arrays.stream(beanInfo.getPropertyDescriptors()).filter(prop -> property
-                .equals(prop.getName
-                        ()))
+                .equals(prop.getName()))
                 .map(PropertyDescriptor::getReadMethod).findFirst().orElseThrow(() -> new
                         RuntimeException("no such method:" + property));
     }

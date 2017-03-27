@@ -17,10 +17,10 @@ import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2M
 
 public class Select {
     private final static String TUPLE_FIELD = "records";
+    private final List<Clause> clauses = new ArrayList<>();
+    private final List<String> selectedFields;
     private TableInfoContext context;
-    private List<Clause> clauses = new ArrayList<>();
     private List<Object> records;
-    private List<String> selectedFields;
     private MethodInvocationCache methodInvocationCache;
 
     private Select() {
@@ -49,20 +49,17 @@ public class Select {
     }
 
     public Select from(String tab) {
-        context = tableInfoMap.lookup(tab);
-        methodInvocationCache = tab2MethodInvocationCacheMap.lookup(tab);
-        if (context != null) {
-            return from(context.getTabledata());
-        } else {
-            throw new RuntimeException("No such table:" + tab);
-        }
+        this.methodInvocationCache = tab2MethodInvocationCacheMap.lookup(tab);
+        this.context = tableInfoMap.lookup(tab).orElseThrow(() -> new RuntimeException("No such table:" +
+                tab));
+        return from(context.getTabledata());
     }
 
     private Select from(Object obj) {
         //it is safe because records must be List according to JavaBean definition
         Object tupleField = invokeGetByReflection(obj, TUPLE_FIELD);
         assert (tupleField instanceof List<?>);
-        records = (List<Object>) tupleField;
+        this.records = (List<Object>) tupleField;
         return this;
     }
 
@@ -86,9 +83,9 @@ public class Select {
             throw new RuntimeException("Table not specifiled in Select");
 
         List<Object> result = records.stream().filter(
-                o -> clauses.stream()
-                        .map(eachClause -> eachClause.eval(o))
-                        .reduce(true, (c, clauseResult) -> c && clauseResult))
+                r -> clauses.stream()
+                        .map(c -> c.eval(r))
+                        .reduce(true, Boolean::logicalAnd))
                 .collect(Collectors.toList());
 
         if (selectedFields.isEmpty()) {

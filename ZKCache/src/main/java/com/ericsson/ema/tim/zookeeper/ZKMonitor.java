@@ -12,7 +12,6 @@ import com.ericsson.util.SystemPropertyUtil;
 import com.ericsson.zookeeper.NodeChildCache;
 import com.ericsson.zookeeper.NodeChildrenChangedListener;
 import com.ericsson.zookeeper.ZooKeeperUtil;
-import javascalautils.Option;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -27,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
 import static com.ericsson.ema.tim.javabean.JavaBeanClassLoader.javaBeanClassLoader;
@@ -103,7 +103,7 @@ public class ZKMonitor {
     }
 
     public void stop() {
-        Option.apply(nodeChildCache).forEach(NodeChildCache::stop);
+        Optional.ofNullable(nodeChildCache).ifPresent(NodeChildCache::stop);
         unloadAllTable();
     }
 
@@ -317,7 +317,7 @@ public class ZKMonitor {
             if (state.equals(State.CONNECTED) || state.equals(State.RECONNECTED)) {
                 loadAllTable();
             } else if (state.equals(State.DISCONNECTED)) {
-                Option.apply(nodeChildCache).forEach(NodeChildCache::stop);
+                Optional.ofNullable(nodeChildCache).ifPresent(NodeChildCache::stop);
             }
         }
     }
