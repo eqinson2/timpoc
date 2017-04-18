@@ -1,0 +1,18 @@
+init:
+     zkConnectionManager.init();
+     zkMonitor = new ZKMonitor(zkConnectionManager);
+     zkMonitor.start();
+
+destroy:
+    zkMonitor.stop();
+    zkConnectionManager.destroy();
+
+select:
+    List<Object> result = select().from("Eqinson").where(like("name", "eqinson1")).where(eq("age","1")).execute();
+    //here Object'r real type is ***Data which must be operated using reflection.
+
+    result = select().from("Eqinson").where(eq("name", "eqinson2")).where(eq("age", "2")).execute();
+    result = select().from("Eqinson").where(eq("name", "eqinson4")).where(eq("age", "4")).where(eq("job", "manager")).execute();
+    List<List<Object>> sliceRes = select("age", "job").from("Eqinson").where(like("name", "eqinson4")).where(eq("age", "4"))
+            .where(eq("job", "manager")).executeWithSelectFields();
+    //here Object'r real type is a string/int
