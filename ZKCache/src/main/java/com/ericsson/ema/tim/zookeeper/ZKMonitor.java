@@ -30,6 +30,7 @@ import java.util.Optional;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
 import static com.ericsson.ema.tim.javabean.JavaBeanClassLoader.javaBeanClassLoader;
+import static com.ericsson.ema.tim.lock.GlobalRWLock.globalRWLock;
 import static com.ericsson.ema.tim.reflection.Tab2ClzMap.tab2ClzMap;
 import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 import static com.ericsson.ema.tim.zookeeper.MetaDataRegistry.metaDataRegistry;
@@ -50,20 +51,20 @@ public class ZKMonitor {
     static {
         try {
             XSD_DIR =
-                    SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.xsddir");
+                SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.xsddir");
         } catch (Exception e) {
             XSD_DIR = "/var/tmp/tim/xsd";
         }
         try {
             JAVABEAN_DIR =
-                    SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.javabeandir");
+                SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.javabeandir");
         } catch (Exception e) {
             JAVABEAN_DIR = "/var/tmp/tim/javabean";
         }
 
         try {
             JAVABEAN_PKG =
-                    SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.javabeanpkg");
+                SystemPropertyUtil.getAndAssertProperty("com.ericsson.dve.timpoc.javabeanpkg");
         } catch (Exception e) {
             JAVABEAN_PKG = "genjavabean";
         }
@@ -113,7 +114,7 @@ public class ZKMonitor {
         List<String> children = new ArrayList<>();
         try {
             nodeChildCache = new NodeChildCache(getConnection(), zkRootPath, new
-                    NodeChildrenChangedListenerImpl());
+                NodeChildrenChangedListenerImpl());
             children = nodeChildCache.start();
         } catch (KeeperException.ConnectionLossException e) {
             LOGGER.warn("Failed to setup nodeChildCache due to missing zookeeper connection.", e);
@@ -128,8 +129,8 @@ public class ZKMonitor {
     private synchronized void loadOneTable(String zkNodeName) {
         LOGGER.debug("Start to load data for node {}", zkNodeName);
         byte[] rawData = zkConnectionManager.getConnection()
-                .map(zkConnection -> getDataZKNoException(zkConnection, zkRootPath + "/" + zkNodeName, new
-                        NodeWatcher(zkNodeName))).orElse(new byte[0]);
+            .map(zkConnection -> getDataZKNoException(zkConnection, zkRootPath + "/" + zkNodeName, new
+                NodeWatcher(zkNodeName))).orElse(new byte[0]);
 
         if (rawData.length == 0) {
             LOGGER.error("Failed to loadOneTable for node {}", zkNodeName);
@@ -158,11 +159,18 @@ public class ZKMonitor {
             loadJavaBean(tableName);
             updateMetaData(jloader);
         }
-        //7. load data by reflection, and the new data will replace old one.
-        Object obj = loadDataByReflection(jloader);
+        Object obj;
+
+        //mutex with select query
+        globalRWLock.writeLock();
+        try {
+            //7. load data by reflection, and the new data will replace old one.
+            obj = loadDataByReflection(jloader);
+        } finally {
+            globalRWLock.writeUnlock();
+        }
         //8. register tab into global registry
         LOGGER.info("=====================register {}=====================", tableName);
-
         //force original loaded obj and its classloader to gc
         tableInfoMap.register(tableName, jloader.getTableMetadata(), obj);
         //System.gc();//enable -XX:+TraceClassUnloading
@@ -170,10 +178,10 @@ public class ZKMonitor {
 
     private boolean isMetaDataDefined(JsonLoader jsonLoader) {
         boolean defined = metaDataRegistry.isRegistered(jsonLoader.getTableName(), jsonLoader
-                .getTableMetadata());
+            .getTableMetadata());
         if (defined)
             LOGGER.info("Metadata already defined for {}, skip regenerating javabean...", jsonLoader
-                    .getTableName());
+                .getTableName());
         else
             LOGGER.info("Metadata NOT defined for {}", jsonLoader.getTableName());
         return defined;
@@ -210,7 +218,7 @@ public class ZKMonitor {
         LOGGER.info("=====================generateJavaBean=====================");
         try {
             Xsd2JavaBean.generateJavaBean(targetSchemaFile, JAVABEAN_DIR, FileUtils.path2Package
-                    (APP_PACKAGE_DIR + FS + JAVABEAN_PKG));
+                (APP_PACKAGE_DIR + FS + JAVABEAN_PKG));
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e.getMessage());
@@ -232,7 +240,7 @@ public class ZKMonitor {
     private void loadJavaBean(String clzName) {
         LOGGER.info("load classpath: {}", JAVABEAN_DIR);
         javaBeanClassLoader.loadClassFromClassPath(JAVABEAN_DIR, APP_PACKAGE + "." + JAVABEAN_PKG + "." +
-                clzName);
+            clzName);
     }
 
     private Object loadDataByReflection(JsonLoader jloader) {
@@ -243,7 +251,7 @@ public class ZKMonitor {
         try {
             obj = tabL.loadData();
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException |
-                InvocationTargetException e) {
+            InvocationTargetException e) {
             e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
@@ -276,7 +284,7 @@ public class ZKMonitor {
 
     private ZooKeeper getConnection() throws KeeperException.ConnectionLossException {
         return zkConnectionManager.getConnection().orElseThrow(KeeperException
-                .ConnectionLossException::new);
+            .ConnectionLossException::new);
     }
 
     private byte[] getDataZKNoException(ZooKeeper zooKeeper, String zkTarget, Watcher watcher) {

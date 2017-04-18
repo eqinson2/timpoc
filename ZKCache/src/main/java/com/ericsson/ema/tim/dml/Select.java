@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
+import static com.ericsson.ema.tim.lock.GlobalRWLock.globalRWLock;
 import static com.ericsson.ema.tim.reflection.MethodInvocationCache.AccessType.GET;
 import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 
@@ -29,7 +30,7 @@ public class Select {
 
     private Select(String... fields) {
         this.selectedFields = (fields == null || fields.length == 0) ?
-                Collections.emptyList() : Arrays.asList(fields);
+            Collections.emptyList() : Arrays.asList(fields);
     }
 
     public static Select select() {
@@ -50,8 +51,8 @@ public class Select {
 
     public Select from(String tab) {
         this.methodInvocationCache = tab2MethodInvocationCacheMap.lookup(tab);
-        this.context = tableInfoMap.lookup(tab).orElseThrow(() -> new RuntimeException("No such table:" +
-                tab));
+        this.context = tableInfoMap.lookup(tab).orElseThrow(
+            () -> new RuntimeException("No such table:" + tab));
         return from(context.getTabledata());
     }
 
@@ -59,6 +60,7 @@ public class Select {
         //it is safe because records must be List according to JavaBean definition
         Object tupleField = invokeGetByReflection(obj, TUPLE_FIELD);
         assert (tupleField instanceof List<?>);
+        //noinspection unchecked
         this.records = (List<Object>) tupleField;
         return this;
     }
@@ -80,23 +82,26 @@ public class Select {
 
     public List<Object> execute() {
         if (context == null)
-            throw new RuntimeException("Table not specifiled in Select");
+            throw new RuntimeException("Table not specified in Select");
 
-        List<Object> result = records.stream().filter(
-                r -> clauses.stream()
-                        .map(c -> c.eval(r))
-                        .reduce(true, Boolean::logicalAnd))
+        globalRWLock.readLock();
+        try {
+            List<Object> result = records.stream().filter(
+                r -> clauses.stream().map(c -> c.eval(r)).reduce(true, Boolean::logicalAnd))
                 .collect(Collectors.toList());
 
-        if (selectedFields.isEmpty()) {
-            return result;
-        } else {
-            List<Object> selectedResult = new ArrayList<>();
-            for (Object obj : result) {
-                selectedResult.add(selectedFields.stream().map(field ->
+            if (selectedFields.isEmpty()) {
+                return result;
+            } else {
+                List<Object> selectedResult = new ArrayList<>();
+                for (Object obj : result) {
+                    selectedResult.add(selectedFields.stream().map(field ->
                         invokeGetByReflection(obj, field)).collect(Collectors.toList()));
+                }
+                return selectedResult;
             }
-            return selectedResult;
+        } finally {
+            globalRWLock.readUnlock();
         }
     }
 }
