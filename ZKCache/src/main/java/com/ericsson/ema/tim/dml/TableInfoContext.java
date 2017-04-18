@@ -10,15 +10,15 @@ public class TableInfoContext {
         return tableMetadata;
     }
 
-    public void setTableMetadata(Map<String, String> tableMetadata) {
+    void setTableMetadata(Map<String, String> tableMetadata) {
         this.tableMetadata = tableMetadata;
     }
 
-    public Object getTabledata() {
+    Object getTabledata() {
         return tabledata;
     }
 
-    public void setTabledata(Object tabledata) {
+    void setTabledata(Object tabledata) {
         this.tabledata = tabledata;
     }
 

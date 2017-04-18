@@ -16,7 +16,7 @@ import static com.ericsson.ema.tim.lock.GlobalRWLock.globalRWLock;
 import static com.ericsson.ema.tim.reflection.MethodInvocationCache.AccessType.GET;
 import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 
-public class Select {
+public class Select implements Selector {
     private final static String TUPLE_FIELD = "records";
     private final List<Clause> clauses = new ArrayList<>();
     private final List<String> selectedFields;
@@ -33,11 +33,11 @@ public class Select {
             Collections.emptyList() : Arrays.asList(fields);
     }
 
-    public static Select select() {
+    public static Selector select() {
         return new Select();
     }
 
-    public static Select select(String... fields) {
+    public static Selector select(String... fields) {
         return new Select(fields);
     }
 
@@ -49,14 +49,15 @@ public class Select {
         return context;
     }
 
-    public Select from(String tab) {
+    @Override
+    public Selector from(String tab) {
         this.methodInvocationCache = tab2MethodInvocationCacheMap.lookup(tab);
         this.context = tableInfoMap.lookup(tab).orElseThrow(
             () -> new RuntimeException("No such table:" + tab));
         return from(context.getTabledata());
     }
 
-    private Select from(Object obj) {
+    private Selector from(Object obj) {
         //it is safe because records must be List according to JavaBean definition
         Object tupleField = invokeGetByReflection(obj, TUPLE_FIELD);
         assert (tupleField instanceof List<?>);
@@ -74,35 +75,46 @@ public class Select {
         }
     }
 
-    public Select where(Clause clause) {
+    @Override
+    public Selector where(Clause clause) {
         this.clauses.add(clause);
         clause.setParent(this);
         return this;
     }
 
-    public List<Object> execute() {
-        if (context == null)
-            throw new RuntimeException("Table not specified in Select");
-
+    private List<Object> internalExecute() {
         globalRWLock.readLock();
         try {
-            List<Object> result = records.stream().filter(
+            return records.stream().filter(
                 r -> clauses.stream().map(c -> c.eval(r)).reduce(true, Boolean::logicalAnd))
                 .collect(Collectors.toList());
-
-            if (selectedFields.isEmpty()) {
-                return result;
-            } else {
-                List<Object> selectedResult = new ArrayList<>();
-                for (Object obj : result) {
-                    selectedResult.add(selectedFields.stream().map(field ->
-                        invokeGetByReflection(obj, field)).collect(Collectors.toList()));
-                }
-                return selectedResult;
-            }
         } finally {
             globalRWLock.readUnlock();
         }
+    }
+
+    @Override
+    public List<Object> execute() {
+        if (context == null)
+            throw new RuntimeException("Table not specified in Select");
+        else if (!selectedFields.isEmpty())
+            throw new RuntimeException("Must use executeWithSelectFields if some fields are to be selected");
+        else return internalExecute();
+    }
+
+    @Override
+    public List<List<Object>> executeWithSelectFields() {
+        if (context == null)
+            throw new RuntimeException("Table not specified in Select");
+        else if (selectedFields.isEmpty())
+            throw new RuntimeException("Must use execute if full fields are to be selected");
+
+        List<List<Object>> selectedResult = new ArrayList<>();
+        for (Object obj : internalExecute()) {
+            selectedResult.add(selectedFields.stream().map(field ->
+                invokeGetByReflection(obj, field)).collect(Collectors.toList()));
+        }
+        return selectedResult;
     }
 }
 
