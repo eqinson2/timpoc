@@ -23,15 +23,15 @@ public class MethodInvocationCache {
     private static Method lookup(Class<?> clz, String property) throws IntrospectionException {
         BeanInfo beanInfo = Introspector.getBeanInfo(clz);
         return Arrays.stream(beanInfo.getPropertyDescriptors()).filter(prop -> property
-                .equals(prop.getName()))
-                .map(PropertyDescriptor::getReadMethod).findFirst().orElseThrow(() -> new
-                        RuntimeException("no such method:" + property));
+            .equals(prop.getName()))
+            .map(PropertyDescriptor::getReadMethod).findFirst().orElseThrow(() -> new
+                RuntimeException("no such method:" + property));
     }
 
     public Method get(Class<?> clz, String field, AccessType accessType) {
         MethodInvocationKey key = new MethodInvocationKey(clz, field);
         Map<MethodInvocationKey, Method> store = accessType == AccessType.GET ?
-                getterStore : setterStore;
+            getterStore : setterStore;
         Method cached = store.get(key);
         if (cached == null) {
             lock.lock();
@@ -60,36 +60,36 @@ public class MethodInvocationCache {
     public enum AccessType {
         GET, SET
     }
-}
 
-class MethodInvocationKey {
-    private final Class<?> lookupClass;
-    private final String methodName;
-    private final int hashCode;
+    private static class MethodInvocationKey {
+        private final Class<?> lookupClass;
+        private final String methodName;
+        private final int hashCode;
 
-    MethodInvocationKey(Class<?> lookupClass, String methodName) {
-        this.lookupClass = lookupClass;
-        this.methodName = methodName;
-        int result = lookupClass != null ? lookupClass.hashCode() : 0;
-        result = 31 * result + (methodName != null ? methodName.hashCode() : 0);
-        this.hashCode = result;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        MethodInvocationKey(Class<?> lookupClass, String methodName) {
+            this.lookupClass = lookupClass;
+            this.methodName = methodName;
+            int result = lookupClass != null ? lookupClass.hashCode() : 0;
+            result = 31 * result + (methodName != null ? methodName.hashCode() : 0);
+            this.hashCode = result;
         }
 
-        MethodInvocationKey that = (MethodInvocationKey) o;
-        return lookupClass == that.lookupClass && methodName.equals(that.methodName);
-    }
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+            MethodInvocationKey that = (MethodInvocationKey) o;
+            return lookupClass == that.lookupClass && methodName.equals(that.methodName);
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
     }
 }

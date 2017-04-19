@@ -5,7 +5,6 @@ target/
 
 # Ignore maven artifacts
 artifacts/
-#Tim/
 JDV-TIMPOC-Provisioning/
 
 # Ignore Maven release related files

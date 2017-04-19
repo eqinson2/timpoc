@@ -105,7 +105,7 @@ public enum ZKConnectionManager {
     }
 
     /**
-     * register the listener to monitor the connection status change
+     * registerOrReplace the listener to monitor the connection status change
      */
     public void registerListener(ZKConnectionChangeWatcher listener) {
         listeners.add(listener);
@@ -132,8 +132,8 @@ public enum ZKConnectionManager {
             // There is no automatic recovery from this, a new connection has to
             // be created
             if (state == Event.KeeperState.Expired) {
-                LOGGER.error("The session [{}] in ZK has been expired will perform an automatic " +
-                        "re-connection attempt", getSessionId());
+                LOGGER.error("The session [{}] in ZK has been expired will perform an automatic re-connection " +
+                    "attempt", getSessionId());
                 connect();
                 if (!getConnection().isPresent() && !waitForReconnect) {
                     LOGGER.error("Failed to reconnect the zookeeper server");

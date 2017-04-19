@@ -46,11 +46,11 @@ public class TabDataLoader {
     }
 
     public Object loadData() throws ClassNotFoundException, IllegalAccessException,
-            InstantiationException,
-            InvocationTargetException {
+        InstantiationException,
+        InvocationTargetException {
         LOGGER.info("=====================reflect class: {}=====================", classToLoad);
         Class<?> clz = tab2ClzMap.lookup(jloader.getTableName()).orElse(Thread.currentThread()
-                .getContextClassLoader().loadClass(classToLoad));
+            .getContextClassLoader().loadClass(classToLoad));
         tab2ClzMap.register(jloader.getTableName(), clz);
 
         Object obj = clz.newInstance();
@@ -59,6 +59,7 @@ public class TabDataLoader {
         LOGGER.debug("init getTupleListType: {}", proxy.getTupleListType());
 
         Method getter = cache.get(clz, TUPLE_FIELD, MethodInvocationCache.AccessType.GET);
+        @SuppressWarnings("unchecked")
         List<Object> records = (List<Object>) getter.invoke(obj);//it will create a list internally
 
         List<List<FieldInfo>> rowcol = jloader.getTupleList();
@@ -86,21 +87,21 @@ public class TabDataLoader {
         PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();
 
         Arrays.stream(propertyDescriptors)
-                .filter(prop -> field.getFieldName().equals(prop.getName()))
-                .findFirst()
-                .ifPresent(
-                        prop -> {
-                            Method setter = prop.getWriteMethod();
-                            try {
-                                setter.invoke(tuple, value);
-                                LOGGER.debug("fillinField : {} = {}", field.getFieldName(), value);
-                            } catch (IllegalAccessException | InvocationTargetException e) {
-                                e.printStackTrace();
-                                LOGGER.error("error fillinField : {}", field);
-                            } catch (IllegalArgumentException e) {
-                                e.printStackTrace();
-                                LOGGER.error("IllegalArgumentException fillinField : {}", field);
-                            }
-                        });
+            .filter(prop -> field.getFieldName().equals(prop.getName()))
+            .findFirst()
+            .ifPresent(
+                prop -> {
+                    Method setter = prop.getWriteMethod();
+                    try {
+                        setter.invoke(tuple, value);
+                        LOGGER.debug("fillinField : {} = {}", field.getFieldName(), value);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        e.printStackTrace();
+                        LOGGER.error("error fillinField : {}", field);
+                    } catch (IllegalArgumentException e) {
+                        e.printStackTrace();
+                        LOGGER.error("IllegalArgumentException fillinField : {}", field);
+                    }
+                });
     }
 }

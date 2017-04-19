@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
-import static com.ericsson.ema.tim.lock.GlobalRWLock.globalRWLock;
+import static com.ericsson.ema.tim.lock.ZKCacheRWLockMap.zkCacheRWLock;
 import static com.ericsson.ema.tim.reflection.MethodInvocationCache.AccessType.GET;
 import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 
@@ -20,6 +20,7 @@ public class Select implements Selector {
     private final static String TUPLE_FIELD = "records";
     private final List<Clause> clauses = new ArrayList<>();
     private final List<String> selectedFields;
+    private String table;
     private TableInfoContext context;
     private List<Object> records;
     private MethodInvocationCache methodInvocationCache;
@@ -29,8 +30,7 @@ public class Select implements Selector {
     }
 
     private Select(String... fields) {
-        this.selectedFields = (fields == null || fields.length == 0) ?
-            Collections.emptyList() : Arrays.asList(fields);
+        this.selectedFields = (fields == null || fields.length == 0) ? Collections.emptyList() : Arrays.asList(fields);
     }
 
     public static Selector select() {
@@ -51,18 +51,7 @@ public class Select implements Selector {
 
     @Override
     public Selector from(String tab) {
-        this.methodInvocationCache = tab2MethodInvocationCacheMap.lookup(tab);
-        this.context = tableInfoMap.lookup(tab).orElseThrow(
-            () -> new RuntimeException("No such table:" + tab));
-        return from(context.getTabledata());
-    }
-
-    private Selector from(Object obj) {
-        //it is safe because records must be List according to JavaBean definition
-        Object tupleField = invokeGetByReflection(obj, TUPLE_FIELD);
-        assert (tupleField instanceof List<?>);
-        //noinspection unchecked
-        this.records = (List<Object>) tupleField;
+        this.table = tab;
         return this;
     }
 
@@ -82,31 +71,41 @@ public class Select implements Selector {
         return this;
     }
 
+    private void initExecuteContext() {
+        this.context = tableInfoMap.lookup(table).orElseThrow(() -> new RuntimeException("Error: Selecting a " +
+            "non-existing table:" + table));
+        this.methodInvocationCache = tab2MethodInvocationCacheMap.lookup(table);
+
+        //it is safe because records must be List according to JavaBean definition
+        Object tupleField = invokeGetByReflection(context.getTabledata(), TUPLE_FIELD);
+        assert (tupleField instanceof List<?>);
+        //noinspection unchecked
+        this.records = (List<Object>) tupleField;
+    }
+
     private List<Object> internalExecute() {
-        globalRWLock.readLock();
+        zkCacheRWLock.readLockTable(table);
         try {
+            initExecuteContext();
             return records.stream().filter(
                 r -> clauses.stream().map(c -> c.eval(r)).reduce(true, Boolean::logicalAnd))
                 .collect(Collectors.toList());
         } finally {
-            globalRWLock.readUnlock();
+            zkCacheRWLock.readUnLockTable(table);
         }
     }
 
     @Override
     public List<Object> execute() {
-        if (context == null)
-            throw new RuntimeException("Table not specified in Select");
-        else if (!selectedFields.isEmpty())
+        if (!selectedFields.isEmpty())
             throw new RuntimeException("Must use executeWithSelectFields if some fields are to be selected");
-        else return internalExecute();
+
+        return internalExecute();
     }
 
     @Override
     public List<List<Object>> executeWithSelectFields() {
-        if (context == null)
-            throw new RuntimeException("Table not specified in Select");
-        else if (selectedFields.isEmpty())
+        if (selectedFields.isEmpty())
             throw new RuntimeException("Must use execute if full fields are to be selected");
 
         List<List<Object>> selectedResult = new ArrayList<>();

@@ -1,17 +1,16 @@
 package com.ericsson.ema.tim.dml;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 public enum TableInfoMap {
     tableInfoMap;
 
-    private Map<String, TableInfoContext> map = new ConcurrentHashMap<>();
+    private Map<String, TableInfoContext> map = new HashMap<>();
 
-    public void register(String tablename, Map<String, String> tableMetadata, Object tabledata) {
-        unregister(tablename);//force old one to gc
-        map.computeIfAbsent(tablename, k -> {
+    public void registerOrReplace(String tablename, Map<String, String> tableMetadata, Object tabledata) {
+        map.compute(tablename, (k, v) -> {
             TableInfoContext context = new TableInfoContext();
             context.setTableMetadata(tableMetadata);
             context.setTabledata(tabledata);

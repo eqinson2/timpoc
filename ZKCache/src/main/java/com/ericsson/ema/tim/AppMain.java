@@ -115,8 +115,8 @@ public class AppMain {
         TabDataLoader tabL = new TabDataLoader(classToLoad, jloader);
         Object obj = tabL.loadData();
 
-        //8. register tab
-        tableInfoMap.register(tableName, jloader.getTableMetadata(), obj);
+        //8. registerOrReplace tab
+        tableInfoMap.registerOrReplace(tableName, jloader.getTableMetadata(), obj);
 
         //9. select:
         LOGGER.info("=====================select some data for testing=====================");

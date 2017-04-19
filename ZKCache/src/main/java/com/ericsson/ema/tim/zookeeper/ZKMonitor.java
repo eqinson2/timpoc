@@ -30,7 +30,7 @@ import java.util.Optional;
 
 import static com.ericsson.ema.tim.dml.TableInfoMap.tableInfoMap;
 import static com.ericsson.ema.tim.javabean.JavaBeanClassLoader.javaBeanClassLoader;
-import static com.ericsson.ema.tim.lock.GlobalRWLock.globalRWLock;
+import static com.ericsson.ema.tim.lock.ZKCacheRWLockMap.zkCacheRWLock;
 import static com.ericsson.ema.tim.reflection.Tab2ClzMap.tab2ClzMap;
 import static com.ericsson.ema.tim.reflection.Tab2MethodInvocationCacheMap.tab2MethodInvocationCacheMap;
 import static com.ericsson.ema.tim.zookeeper.MetaDataRegistry.metaDataRegistry;
@@ -113,8 +113,7 @@ public class ZKMonitor {
 
         List<String> children = new ArrayList<>();
         try {
-            nodeChildCache = new NodeChildCache(getConnection(), zkRootPath, new
-                NodeChildrenChangedListenerImpl());
+            nodeChildCache = new NodeChildCache(getConnection(), zkRootPath, new NodeChildrenChangedListenerImpl());
             children = nodeChildCache.start();
         } catch (KeeperException.ConnectionLossException e) {
             LOGGER.warn("Failed to setup nodeChildCache due to missing zookeeper connection.", e);
@@ -129,22 +128,24 @@ public class ZKMonitor {
     private synchronized void loadOneTable(String zkNodeName) {
         LOGGER.debug("Start to load data for node {}", zkNodeName);
         byte[] rawData = zkConnectionManager.getConnection()
-            .map(zkConnection -> getDataZKNoException(zkConnection, zkRootPath + "/" + zkNodeName, new
-                NodeWatcher(zkNodeName))).orElse(new byte[0]);
+            .map(zkConnection -> getDataZKNoException(zkConnection, zkRootPath + "/" + zkNodeName, new NodeWatcher
+                (zkNodeName))).orElse(new byte[0]);
 
         if (rawData.length == 0) {
             LOGGER.error("Failed to loadOneTable for node {}", zkNodeName);
             return;
         }
+
+
         //1. load json
         JsonLoader jloader = loadJsonFromRawData(new String(rawData), zkNodeName);
         String tableName = jloader.getTableName();
-
+        boolean needToInvalidateInvocationCache = false;
         if (!isMetaDataDefined(jloader)) {
             //metadata change-> function need re-reflection
-            tableInfoMap.unregister(tableName);
-            tab2MethodInvocationCacheMap.unRegister(tableName);
+            //tableInfoMap.unregister(tableName);
             tab2ClzMap.unRegister(tableName);
+            needToInvalidateInvocationCache = true;
 
             //2. parse json cache and build as datamodel
             Table table = buildDataModelFromJson(jloader);
@@ -159,21 +160,20 @@ public class ZKMonitor {
             loadJavaBean(tableName);
             updateMetaData(jloader);
         }
-        Object obj;
+        //7. load data by reflection, and the new data will replace old one.
+        Object obj = loadDataByReflection(jloader);
 
-        //mutex with select query
-        globalRWLock.writeLock();
-        try {
-            //7. load data by reflection, and the new data will replace old one.
-            obj = loadDataByReflection(jloader);
-        } finally {
-            globalRWLock.writeUnlock();
-        }
-        //8. register tab into global registry
-        LOGGER.info("=====================register {}=====================", tableName);
+        //8. registerOrReplace tab into global registry
+        LOGGER.info("=====================registerOrReplace {}=====================", tableName);
         //force original loaded obj and its classloader to gc
-        tableInfoMap.register(tableName, jloader.getTableMetadata(), obj);
-        //System.gc();//enable -XX:+TraceClassUnloading
+        zkCacheRWLock.writeLockTable(tableName);
+        try {
+            if (needToInvalidateInvocationCache)
+                tab2MethodInvocationCacheMap.unRegister(tableName);
+            tableInfoMap.registerOrReplace(tableName, jloader.getTableMetadata(), obj);
+        } finally {
+            zkCacheRWLock.writeUnLockTable(tableName);
+        }
     }
 
     private boolean isMetaDataDefined(JsonLoader jsonLoader) {
@@ -267,7 +267,7 @@ public class ZKMonitor {
     }
 
     private void unloadOneTable(String zkNodeName) {
-        LOGGER.info("=====================register {}=====================", zkNodeName);
+        LOGGER.info("=====================registerOrReplace {}=====================", zkNodeName);
         metaDataRegistry.unregisterMetaData(zkNodeName);
         tableInfoMap.unregister(zkNodeName);
         tab2MethodInvocationCacheMap.unRegister(zkNodeName);
@@ -308,7 +308,7 @@ public class ZKMonitor {
         }
 
         /**
-         * Notifies that we failed to read the data from the path and register a new watcher. <br>
+         * Notifies that we failed to read the data from the path and registerOrReplace a new watcher. <br>
          * The only way out of this is to restart the {@link NodeChildCache} instance.
          *
          * @since 2.8
