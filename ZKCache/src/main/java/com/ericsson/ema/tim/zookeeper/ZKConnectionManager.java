@@ -2,7 +2,6 @@ package com.ericsson.ema.tim.zookeeper;
 
 import com.ericsson.util.SystemPropertyUtil;
 import com.ericsson.zookeeper.ZooKeeperUtil;
-import javascalautils.concurrent.NamedSequenceThreadFactory;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -14,6 +13,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The connection manager used to maintain Z* connections
@@ -48,7 +48,7 @@ public enum ZKConnectionManager {
     public void init() {
         LOGGER.info("Start to init zookeeper connection manager.");
         connect();
-        reconnectExecutor = Executors.newSingleThreadExecutor(new NamedSequenceThreadFactory("ZKReconnect"));
+        reconnectExecutor = Executors.newSingleThreadExecutor(new ZKNamedSequenceThreadFactory("ZKReconnect"));
         reconnFuture = reconnectExecutor.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
@@ -163,6 +163,19 @@ public enum ZKConnectionManager {
             } catch (InterruptedException e) {
                 LOGGER.trace(e.getMessage());
             }
+        }
+    }
+
+    private final class ZKNamedSequenceThreadFactory implements ThreadFactory {
+        private final AtomicLong counter = new AtomicLong(1L);
+        private final String threadName;
+
+        public ZKNamedSequenceThreadFactory(String threadName) {
+            this.threadName = threadName;
+        }
+
+        public Thread newThread(Runnable runnable) {
+            return new Thread(runnable, this.threadName + "-" + this.counter.getAndIncrement());
         }
     }
 
